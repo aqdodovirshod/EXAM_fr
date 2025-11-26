@@ -1,16 +1,41 @@
 from datetime import datetime
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from .models import Company
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from .models import Vacancy, Resume, Application, FavoriteVacancy
+
+from rest_framework import viewsets
+
+
 from .serializers import (
     VacancySerializer, 
     ResumeSerializer, 
     ApplicationSerializer,
-    FavoriteToggleResponseSerializer
+    FavoriteToggleResponseSerializer,
+    CompanyWithVacanciesSerializer,
+    EmployerProfileSerializer,
+    SeekerProfileSerializer,
 )
+
+class CompanyDetailWithVacanciesView(generics.RetrieveAPIView):
+    queryset = Company.objects.all()
+    serializer_class = CompanyWithVacanciesSerializer
+
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role == "seeker":
+            serializer = SeekerProfileSerializer(user)
+        else:
+            serializer = EmployerProfileSerializer(user)
+        return Response(serializer.data)
 
 
 class VacancyListCreateView(generics.ListCreateAPIView):
@@ -72,7 +97,7 @@ class ResumeListCreateView(generics.ListCreateAPIView):
         qs = super().get_queryset()
         skill = self.request.query_params.get("skill")
         if skill:
-            qs = qs.filter(skills__name__iexact=skill)  
+            qs = qs.filter(skills__name__icontains=skill)  
         return qs
 
     def perform_create(self, serializer):

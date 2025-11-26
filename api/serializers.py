@@ -1,17 +1,15 @@
 from rest_framework import serializers
-from .models import Company, Vacancy, Resume, Application, FavoriteVacancy, Skill
+from .models import Company, Vacancy, Resume, Application, FavoriteVacancy
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
 
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = "__all__"
-
-
-class SkillSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Skill
-        fields = ["id", "name"]
 
 
 class VacancySerializer(serializers.ModelSerializer):
@@ -54,10 +52,6 @@ class VacancySerializer(serializers.ModelSerializer):
 
 class ResumeSerializer(serializers.ModelSerializer):
     user = serializers.StringRelatedField(read_only=True)
-    skills = SkillSerializer(many=True, read_only=True)
-    skill_ids = serializers.PrimaryKeyRelatedField(
-        queryset=Skill.objects.all(), many=True, source="skills", write_only=True
-    )
 
     class Meta:
         model = Resume
@@ -73,11 +67,13 @@ class ResumeSerializer(serializers.ModelSerializer):
             "experience_years",
             "about",
             "skills",
-            "skill_ids",
             "is_active",
             "created_at",
             "updated_at",
+            "file_url",
         ]
+    def get_file_url(self, obj):
+        return obj.file.url if obj.file else None
 
 
 
@@ -118,3 +114,52 @@ class FavoriteVacancySerializer(serializers.ModelSerializer):
 
 class FavoriteToggleResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
+
+
+class CompanyWithVacanciesSerializer(serializers.ModelSerializer):
+    vacancies = VacancySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Company
+        fields = ["id", "name", "logo", "description", "website", "vacancies"]
+
+
+class EmployerProfileSerializer(serializers.ModelSerializer):
+    vacancies = VacancySerializer(many=True, read_only=True)
+    applications = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role", "vacancies", "applications"]
+
+    def get_applications(self, obj):
+        qs = Application.objects.filter(vacancy__author=obj)
+        return ApplicationSerializer(qs, many=True).data
+
+
+class SeekerProfileSerializer(serializers.ModelSerializer):
+    resume = ResumeSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "role", "resume"]
+
+class ResumeShortSerializer(serializers.ModelSerializer):
+    file_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Resume
+        fields = ["full_name", "file_url"]
+
+    def get_file_url(self, obj):
+        return obj.file.url if obj.file else None
+
+
+class ApplicationCompactSerializer(serializers.ModelSerializer):
+    vacancy_id = serializers.IntegerField(source="vacancy.id", read_only=True)
+    vacancy_title = serializers.CharField(source="vacancy.title", read_only=True)
+    resume = ResumeShortSerializer(read_only=True)
+
+    class Meta:
+        model = Application
+        fields = ["id", "vacancy_id", "vacancy_title", "status", "updated_at", "resume"]

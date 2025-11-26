@@ -3,10 +3,10 @@ from accounts.models import CustomUser
 
 
 class Company(models.Model):
-    name = models.CharField("Company name", max_length=200, unique=True)
-    logo = models.ImageField("Logo", upload_to="company_logos/", blank=True, null=True)
-    description = models.TextField("Description", blank=True)
-    website = models.URLField("Website", blank=True)
+    name = models.CharField(max_length=200, unique=True, verbose_name="Company name")
+    logo = models.ImageField(upload_to="company_logos/", blank=True, null=True, verbose_name="Logo")
+    description = models.TextField(blank=True, verbose_name="Description")
+    website = models.URLField(blank=True, verbose_name="Website")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -24,7 +24,7 @@ class Vacancy(models.Model):
         ("part_time", "Part-time"),
         ("contract", "Contract"),
         ("internship", "Internship"),
-        ("fifo", "FIFO / Вахта"),
+        ("fifo", "FIFO"),
         ("volunteer", "Volunteering"),
     ]
 
@@ -92,16 +92,6 @@ class Vacancy(models.Model):
         return "Not specified"
 
 
-class Skill(models.Model):
-    name = models.CharField("Skill", max_length=100, unique=True)
-
-    class Meta:
-        verbose_name = "Skill"
-        verbose_name_plural = "Skills"
-
-    def __str__(self):
-        return self.name
-
 
 class Resume(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="resume")
@@ -115,11 +105,12 @@ class Resume(models.Model):
     salary_expectation = models.DecimalField("Expected salary", max_digits=12, decimal_places=2, null=True, blank=True)
     experience_years = models.PositiveSmallIntegerField("Years of experience", default=0)
     about = models.TextField("About me", blank=True)
-    skills = models.ManyToManyField(Skill, related_name="resumes", blank=True)
-
+    skills = models.CharField("Skills", max_length=300, blank=True)
     is_active = models.BooleanField("Looking for job", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    file = models.FileField(upload_to="resumes/", blank=True, null=True)
 
     class Meta:
         verbose_name = "Resume"
@@ -127,9 +118,13 @@ class Resume(models.Model):
 
     def __str__(self):
         return f"{self.full_name} – {self.desired_position}"
+    
+    @property
+    def file_url(self):
+        if self.file:
+            return self.file.url
+        return None
 
-    def has_skill(self, skill_name: str) -> bool:
-        return self.skills.filter(name__iexact=skill_name).exists()
 
 
 class Application(models.Model):

@@ -1,5 +1,16 @@
 from django.urls import path, include
-from .views import VacancyListCreateView, VacancyRetrieveUpdateDeleteView, ResumeListCreateView, ResumeRetrieveUpdateDeleteView, ApplicationCreateView, FavoriteVacancyToggleView
+from rest_framework.routers import DefaultRouter
+from .views import (
+    VacancyListCreateView,
+    VacancyRetrieveUpdateDeleteView,
+    ResumeListCreateView,
+    ResumeRetrieveUpdateDeleteView,
+    ApplicationCreateView,
+    FavoriteVacancyToggleView,
+    CompanyDetailWithVacanciesView,
+    UserProfileView,
+)
+
 
 urlpatterns = [
     path("vacancies/", VacancyListCreateView.as_view(), name="vacancy-list-create"),
@@ -11,4 +22,7 @@ urlpatterns = [
     path("vacancies/<int:vacancy_id>/apply/", ApplicationCreateView.as_view(), name="application-create"),
 
     path("vacancies/<int:vacancy_id>/favorite/", FavoriteVacancyToggleView.as_view(), name="favorite-toggle"),
+
+    path("companies/<int:pk>/profile/", CompanyDetailWithVacanciesView.as_view(), name="company-profile"),
+    path("my-account/", UserProfileView.as_view(), name="user-profile"),
 ]
